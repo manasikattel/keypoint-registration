@@ -1,6 +1,9 @@
 # CrossKey: Keypoint-Based 3D Registration
 
-This repository contains the training and scoring code for an unsupervised keypoint-based registration model on paired 3D volumes. The default configuration matches the proposed method: a dual-branch SwinUNETR encoder with interpolation-convolution decoder, mask+image input, probabilistic keypoint heatmaps, rigid transform estimation from learned keypoints, and BBVRE/keypoint/regularization losses. Baseline U-Net and equivariant U-Net backbones are also included. Dataset paths, file names, and split ranges are configured in `config.yaml`.
+CrossKey trains an unsupervised keypoint-based model for registering MRI TRUS 3D volumes. It learns keypoints from image and mask inputs, estimates a rigid transform from those keypoints, and reports registration quality on held-out data.
+
+The default setup follows the main CrossKey model. Dataset paths, file names, split ranges, and model choices live in `config.yaml`.
+
 Code layout:
 
 ```text
@@ -15,7 +18,7 @@ crosskey/
   utils/                         # geometry and rotation utilities
 ```
 
-Each sample is a directory containing two images, two masks, and a 4-by-4 voxel-space transform. The default names are placeholders and can be changed in the config.
+Each sample should be a directory with source and target images, masks, and a 4-by-4 voxel-space transform. The default filenames are placeholders and can be changed in `config.yaml`.
 
 ```text
 data_root/
@@ -36,11 +39,9 @@ pip install -r requirements.txt
 python train.py data.cfg.data_dir=/path/to/data
 ```
 
-Metrics are written locally as CSV files and checkpoints go under `outputs/`
+Metrics are written as CSV files, and checkpoints are saved under `outputs/`.
 
-Logging can be changed through the Hydra `logger` section. The default logger is
-Lightning's `CSVLogger`, which keeps the repository self-contained. To use
-Weights & Biases instead, install `wandb` and override the logger:
+The default logger is Lightning's `CSVLogger`, so training works without any external service. To use Weights & Biases instead, install `wandb` and override the Hydra logger:
 
 ```bash
 pip install wandb
@@ -50,8 +51,7 @@ python train.py data.cfg.data_dir=/path/to/data \
   logger.name=my-run
 ```
 
-The same pattern can be used for any other PyTorch Lightning logger by changing
-`logger._target_` and adding the arguments expected by that logger.
+The same pattern works for other PyTorch Lightning loggers by changing `logger._target_` and adding the arguments expected by that logger.
 
 Prediction and scoring:
 
@@ -63,4 +63,4 @@ python predict.py \
   prediction.voxel_spacing_mm=1.0
 ```
 
-This writes `predictions.csv`, `metrics_summary.csv`, and `metrics_summary.json` with rotation error, translation error, BBVRE, source/target/symmetric SRE, mask Dice, keypoint consistency distance, predicted transforms, and optional landmark TRE if landmark filenames are provided in `data.cfg.files`.
+This writes `predictions.csv`, `metrics_summary.csv`, and `metrics_summary.json` with the predicted transforms and the main registration metrics. Optional landmark TRE is included when landmark filenames are provided in `data.cfg.files`.
